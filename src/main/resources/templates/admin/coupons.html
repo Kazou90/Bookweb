@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/admin-layout :: adminHead}"></head>
+
+<body>
+    <div th:replace="~{fragments/admin-layout :: sidebar}"></div>
+    <div th:replace="~{fragments/admin-layout :: topbar}"></div>
+
+    <div class="admin-content">
+        <div class="admin-page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h3>Quản lý mã giảm giá &amp; Thông báo</h3>
+                <p>Tạo mã khuyến mãi và gửi thông báo đến người dùng</p>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-admin-primary" data-bs-toggle="modal" data-bs-target="#addCouponModal">
+                    <i class="bi bi-plus-lg"></i> Thêm mã giảm giá
+                </button>
+                <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#sendNotifModal">
+                    <i class="bi bi-bell-fill"></i> Gửi thông báo
+                </button>
+            </div>
+        </div>
+
+        <!-- Thông báo -->
+        <div th:if="${success}" class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle-fill"></i> <span th:text="${success}">Thành công</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle-fill"></i> <span th:text="${error}">Lỗi</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <!-- Bảng mã giảm giá -->
+        <div class="admin-table-wrapper">
+            <div class="admin-table-header">
+                <h5>Danh sách mã giảm giá (<span th:text="${#lists.size(coupons)}">0</span>)</h5>
+            </div>
+            <div class="admin-table table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Mã</th>
+                            <th>Mô tả</th>
+                            <th>Giảm (%)</th>
+                            <th>Giảm tối đa</th>
+                            <th>Đơn tối thiểu</th>
+                            <th>Thời hạn</th>
+                            <th>Đã dùng</th>
+                            <th>Trạng thái</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="coupon : ${coupons}">
+                            <td>
+                                <span class="badge bg-primary fs-6" th:text="${coupon.code}">CODE</span>
+                            </td>
+                            <td th:text="${coupon.description != null ? coupon.description : 'N/A'}">Mô tả</td>
+                            <td>
+                                <strong class="text-danger" th:text="${coupon.discountPercent + '%'}">0%</strong>
+                            </td>
+                            <td
+                                th:text="${coupon.maxDiscount != null ? #numbers.formatDecimal(coupon.maxDiscount, 0, 'COMMA', 0, 'POINT') + ' ₫' : 'Không giới hạn'}">
+                                N/A</td>
+                            <td
+                                th:text="${coupon.minOrderAmount != null ? #numbers.formatDecimal(coupon.minOrderAmount, 0, 'COMMA', 0, 'POINT') + ' ₫' : 'Không'}">
+                                N/A</td>
+                            <td>
+                                <small th:if="${coupon.endDate != null}"
+                                    th:text="${#temporals.format(coupon.endDate, 'dd/MM/yyyy')}">Ngày</small>
+                                <small th:unless="${coupon.endDate != null}" class="text-muted">Không giới hạn</small>
+                            </td>
+                            <td>
+                                <span th:text="${coupon.usedCount}">0</span>
+                                <span th:if="${coupon.usageLimit != null}" th:text="'/ ' + ${coupon.usageLimit}"></span>
+                                <span th:unless="${coupon.usageLimit != null}" class="text-muted">/ ∞</span>
+                            </td>
+                            <td>
+                                <span th:if="${coupon.valid}" class="badge bg-success">Đang hoạt động</span>
+                                <span th:unless="${coupon.valid}" class="badge bg-secondary">Hết hiệu lực</span>
+                            </td>
+                            <td>
+                                <div class="d-flex gap-1 flex-wrap">
+                                    <form th:action="@{'/admin/coupons/' + ${coupon.id} + '/toggle'}" method="post">
+                                        <button type="submit"
+                                            th:class="${coupon.active ? 'btn btn-sm btn-outline-warning' : 'btn btn-sm btn-outline-success'}"
+                                            th:text="${coupon.active ? 'Tắt' : 'Bật'}">Tắt</button>
+                                    </form>
+                                    <!-- Nút gửi mã cho user -->
+                                    <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal"
+                                        th:data-bs-target="'#sendCouponModal' + ${coupon.id}">
+                                        <i class="bi bi-send"></i> Gửi
+                                    </button>
+                                    <a th:href="@{'/admin/coupons/delete/' + ${coupon.id}}"
+                                        class="btn btn-sm btn-outline-danger"
+                                        onclick="return confirm('Bạn có chắc muốn xóa mã giảm giá này?')">Xóa</a>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(coupons)}">
+                            <td colspan="9" class="text-center text-muted py-4">Chưa có mã giảm giá nào</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal thêm mã giảm giá -->
+    <div class="modal fade" id="addCouponModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-ticket-perforated"></i> Thêm mã giảm giá mới</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form th:action="@{/admin/coupons/add}" method="post">
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Mã giảm giá <span class="text-danger">*</span></label>
+                                <input type="text" name="code" class="form-control" required
+                                    placeholder="VD: SALE20, WELCOME10" style="text-transform: uppercase;">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Phần trăm giảm (%) <span class="text-danger">*</span></label>
+                                <input type="number" name="discountPercent" class="form-control" required min="1"
+                                    max="100" placeholder="VD: 20">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Mô tả</label>
+                                <input type="text" name="description" class="form-control"
+                                    placeholder="VD: Giảm 20% cho đơn hàng từ 200k">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Giảm tối đa (₫)</label>
+                                <input type="number" name="maxDiscount" class="form-control"
+                                    placeholder="VD: 50000 (để trống = không giới hạn)">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Đơn tối thiểu (₫)</label>
+                                <input type="number" name="minOrderAmount" class="form-control"
+                                    placeholder="VD: 100000 (để trống = không yêu cầu)">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Ngày bắt đầu</label>
+                                <input type="datetime-local" name="startDate" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Ngày kết thúc</label>
+                                <input type="datetime-local" name="endDate" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Số lần sử dụng tối đa</label>
+                                <input type="number" name="usageLimit" class="form-control" min="1"
+                                    placeholder="Để trống = không giới hạn">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> Tạo mã giảm giá
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal gửi mã giảm giá cho user (1 modal cho mỗi coupon) -->
+    <th:block th:each="coupon : ${coupons}">
+        <div class="modal fade" th:id="'sendCouponModal' + ${coupon.id}" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-info text-white">
+                        <h5 class="modal-title">
+                            <i class="bi bi-send"></i> Gửi mã
+                            <span class="badge bg-warning text-dark" th:text="${coupon.code}">CODE</span>
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form th:action="@{'/admin/coupons/' + ${coupon.id} + '/send'}" method="post">
+                        <div class="modal-body">
+                            <p>Gửi thông báo mã giảm giá <strong th:text="${coupon.code}">CODE</strong>
+                                (<span th:text="${coupon.description}">Mô tả</span>) cho:</p>
+
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" th:name="'sendOption_' + ${coupon.id}"
+                                    th:id="'sendAll_' + ${coupon.id}" value="all"
+                                    th:onchange="'toggleSendOption(' + ${coupon.id} + ', true)'">
+                                <label class="form-check-label fw-bold" th:for="'sendAll_' + ${coupon.id}">
+                                    <i class="bi bi-people-fill"></i> Tất cả người dùng
+                                </label>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="radio" th:name="'sendOption_' + ${coupon.id}"
+                                    th:id="'sendOne_' + ${coupon.id}" value="one" checked
+                                    th:onchange="'toggleSendOption(' + ${coupon.id} + ', false)'">
+                                <label class="form-check-label fw-bold" th:for="'sendOne_' + ${coupon.id}">
+                                    <i class="bi bi-person-fill"></i> Người dùng cụ thể
+                                </label>
+                            </div>
+
+                            <div th:id="'userSelect_' + ${coupon.id}">
+                                <select name="userId" class="form-select">
+                                    <option value="">-- Chọn người dùng --</option>
+                                    <option th:each="user : ${users}" th:value="${user.id}"
+                                        th:text="${user.username + ' (' + user.email + ')'}">User</option>
+                                </select>
+                            </div>
+                            <input type="hidden" name="sendToAll" th:id="'sendToAllFlag_' + ${coupon.id}" value="false">
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn btn-info text-white">
+                                <i class="bi bi-send-fill"></i> Gửi thông báo
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </th:block>
+
+    <!-- Modal gửi thông báo tùy chỉnh -->
+    <div class="modal fade" id="sendNotifModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title"><i class="bi bi-bell-fill"></i> Gửi thông báo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form th:action="@{/admin/notifications/send}" method="post">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Tiêu đề <span class="text-danger">*</span></label>
+                            <input type="text" name="title" class="form-control" required
+                                placeholder="VD: Thông báo bảo trì hệ thống">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nội dung <span class="text-danger">*</span></label>
+                            <textarea name="message" class="form-control" rows="3" required
+                                placeholder="Nhập nội dung thông báo..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="notifOption" id="notifAll"
+                                    value="all" onchange="toggleNotifOption(true)">
+                                <label class="form-check-label fw-bold" for="notifAll">
+                                    <i class="bi bi-people-fill"></i> Gửi tất cả
+                                </label>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="radio" name="notifOption" id="notifOne"
+                                    value="one" checked onchange="toggleNotifOption(false)">
+                                <label class="form-check-label fw-bold" for="notifOne">
+                                    <i class="bi bi-person-fill"></i> Gửi cho 1 người
+                                </label>
+                            </div>
+                            <div id="notifUserSelect">
+                                <select name="userId" class="form-select">
+                                    <option value="">-- Chọn người dùng --</option>
+                                    <option th:each="user : ${users}" th:value="${user.id}"
+                                        th:text="${user.username + ' (' + user.email + ')'}">User</option>
+                                </select>
+                            </div>
+                            <input type="hidden" name="sendToAll" id="notifSendToAllFlag" value="false">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-send-fill"></i> Gửi thông báo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleSidebar() {
+            document.getElementById('adminSidebar').classList.toggle('show');
+        }
+        document.getElementById('link-coupons').classList.add('active');
+
+        // Gửi coupon: toggle giữa "tất cả" và "chọn user"
+        function toggleSendOption(couponId, isAll) {
+            document.getElementById('userSelect_' + couponId).style.display = isAll ? 'none' : 'block';
+            document.getElementById('sendToAllFlag_' + couponId).value = isAll ? 'true' : 'false';
+        }
+
+        // Gửi thông báo: toggle
+        function toggleNotifOption(isAll) {
+            document.getElementById('notifUserSelect').style.display = isAll ? 'none' : 'block';
+            document.getElementById('notifSendToAllFlag').value = isAll ? 'true' : 'false';
+        }
+    </script>
+</body>
+
+</html>

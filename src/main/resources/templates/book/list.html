@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head th:replace="~{fragments/header :: head}"></head>
+
+<body>
+    <nav th:replace="~{fragments/header :: navbar}"></nav>
+    <main class="container mt-4 mb-5">
+        <!-- Hero nhỏ -->
+        <div class="book-list-hero">
+            <div>
+                <h2 class="mb-1"><i class="bi bi-journal-bookmark-fill"></i> Kho sách</h2>
+                <p class="mb-0 text-muted" th:text="'Khám phá ' + ${totalItems} + ' cuốn sách chất lượng'">
+                    Khám phá kho sách</p>
+            </div>
+        </div>
+
+        <!-- Thanh tìm kiếm -->
+        <div class="book-search-section">
+            <form th:action="@{/books}" method="get" class="row g-2 align-items-center">
+                <div class="col-md-8">
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="bi bi-search text-muted"></i>
+                        </span>
+                        <input type="text" name="keyword" class="form-control border-start-0"
+                            placeholder="Tìm kiếm sách theo tiêu đề, tác giả..." th:value="${keyword}">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary-custom btn-lg w-100">
+                        <i class="bi bi-search"></i> Tìm kiếm
+                    </button>
+                </div>
+                <div class="col-md-2">
+                    <a th:href="@{/books}" class="btn btn-outline-custom btn-lg w-100">Xóa bộ lọc</a>
+                </div>
+            </form>
+
+            <!-- Tìm kiếm nhanh AJAX -->
+            <div class="mt-3">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0">
+                        <i class="bi bi-lightning-fill text-warning"></i>
+                    </span>
+                    <input type="text" id="ajaxSearch" class="form-control border-start-0"
+                        placeholder="Tìm kiếm nhanh (nhập ít nhất 2 ký tự)...">
+                </div>
+                <div id="ajaxResults" class="mt-2"></div>
+            </div>
+        </div>
+
+        <!-- Grid sách dạng cards - CHỈ MUA HÀNG, không có sửa/xóa -->
+        <div class="row g-4 mt-1" th:if="${!#lists.isEmpty(books)}">
+            <div th:each="book : ${books}" class="col-6 col-md-4 col-lg-3">
+                <div class="book-card-grid">
+                    <!-- Ảnh bìa -->
+                    <div class="book-card-img-wrapper">
+                        <img th:if="${book.image != null}" th:src="@{'/images/' + ${book.image}}" alt="Ảnh sách"
+                            class="book-card-img">
+                        <div th:unless="${book.image != null}" class="book-card-img-placeholder">
+                            <i class="bi bi-book" style="font-size: 3rem;"></i>
+                        </div>
+                        <!-- Badge danh mục -->
+                        <span class="book-card-category-badge"
+                            th:text="${book.category != null ? book.category.name : 'Chưa có danh mục'}">Danh mục</span>
+                    </div>
+
+                    <!-- Thông tin sách -->
+                    <div class="book-card-body">
+                        <h6 class="book-card-title" th:text="${book.title}">Tên sách</h6>
+                        <p class="book-card-author" th:text="${book.author != null ? book.author : 'Không rõ'}">Tác giả
+                        </p>
+                        <div class="book-card-price"
+                            th:text="${#numbers.formatDecimal(book.price, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</div>
+                    </div>
+
+                    <!-- Chỉ có nút Thêm giỏ hàng -->
+                    <div class="book-card-actions">
+                        <form th:action="@{'/cart/add/' + ${book.id}}" method="post" class="w-100">
+                            <button type="submit" class="btn btn-success btn-sm w-100">
+                                <i class="bi bi-cart-plus"></i> Thêm giỏ hàng
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trống -->
+        <div th:if="${#lists.isEmpty(books)}" class="text-center py-5">
+            <i class="bi bi-inbox" style="font-size: 3rem; color: var(--text-muted);"></i>
+            <h4 class="mt-3 text-muted">Không có sách nào trong danh sách</h4>
+            <p class="text-muted" th:if="${keyword != null}">Thử tìm kiếm với từ khóa khác</p>
+        </div>
+
+        <!-- Phân trang -->
+        <nav th:if="${totalPages > 1}" class="mt-4">
+            <ul class="pagination pagination-custom justify-content-center">
+                <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
+                    <a class="page-link" th:href="@{/books(page=${currentPage - 1}, keyword=${keyword})}">
+                        <i class="bi bi-chevron-left"></i> Trước
+                    </a>
+                </li>
+                <li class="page-item" th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
+                    th:classappend="${i == currentPage} ? 'active'">
+                    <a class="page-link" th:href="@{/books(page=${i}, keyword=${keyword})}" th:text="${i + 1}"></a>
+                </li>
+                <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled'">
+                    <a class="page-link" th:href="@{/books(page=${currentPage + 1}, keyword=${keyword})}">
+                        Sau <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        <p class="text-muted text-center mt-2"
+            th:text="'Hiển thị trang ' + (${currentPage} + 1) + '/' + ${totalPages} + ' — Tổng cộng: ' + ${totalItems} + ' cuốn sách'">
+        </p>
+    </main>
+    <footer th:replace="~{fragments/header :: footer}"></footer>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script th:inline="javascript">
+        $(document).ready(function () {
+            $('#ajaxSearch').on('keyup', function () {
+                var keyword = $(this).val();
+                if (keyword.length >= 2) {
+                    $.ajax({
+                        url: '/api/v1/books/search', data: { keyword: keyword }, success: function (data) {
+                            var html = '<div class="list-group shadow-sm">';
+                            if (data.length === 0) html += '<div class="list-group-item text-muted"><i class="bi bi-search"></i> Không tìm thấy kết quả.</div>';
+                            data.forEach(function (book) {
+                                html += '<div class="list-group-item d-flex justify-content-between align-items-center">' +
+                                    '<div><strong>' + book.title + '</strong> <span class="text-muted">— ' + (book.author || '') + '</span></div>' +
+                                    '<span class="badge bg-warning text-dark">' + Number(book.price).toLocaleString('vi-VN') + ' ₫</span></div>';
+                            });
+                            html += '</div>';
+                            $('#ajaxResults').html(html);
+                        }
+                    });
+                } else { $('#ajaxResults').html(''); }
+            });
+        });
+    </script>
+    <script th:replace="~{fragments/header :: notifScript}"></script>
+</body>
+
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head th:replace="~{fragments/admin-layout :: adminHead}"></head>
+
+<body>
+    <div th:replace="~{fragments/admin-layout :: sidebar}"></div>
+    <div th:replace="~{fragments/admin-layout :: topbar}"></div>
+
+    <div class="admin-content">
+        <div class="admin-page-header">
+            <h3>Quản lý đơn hàng</h3>
+            <p>Danh sách tất cả đơn hàng trong hệ thống</p>
+        </div>
+
+        <!-- Thống kê -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="stat-card-admin">
+                    <div class="stat-label">TỔNG ĐƠN HÀNG</div>
+                    <div class="stat-value" th:text="${#lists.size(orders)}">0</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card-admin">
+                    <div class="stat-label">TỔNG DOANH THU</div>
+                    <div class="stat-value price-admin" th:if="${!#lists.isEmpty(orders)}"
+                        th:text="${#numbers.formatDecimal(#aggregates.sum(orders.![totalPrice != null ? totalPrice : 0]), 0, 'COMMA', 0, 'POINT')} + ' ₫'">
+                        0</div>
+                    <div class="stat-value" th:if="${#lists.isEmpty(orders)}">0 ₫</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card-admin">
+                    <div class="stat-label">GIÁ TRỊ TB / ĐƠN</div>
+                    <div class="stat-value price-admin" th:if="${!#lists.isEmpty(orders)}"
+                        th:text="${#numbers.formatDecimal(#aggregates.avg(orders.![totalPrice != null ? totalPrice : 0]), 0, 'COMMA', 0, 'POINT')} + ' ₫'">
+                        0</div>
+                    <div class="stat-value" th:if="${#lists.isEmpty(orders)}">0 ₫</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bảng đơn hàng -->
+        <div class="admin-table-wrapper">
+            <div class="admin-table-header">
+                <h5>Tất cả đơn hàng (<span th:text="${#lists.size(orders)}">0</span>)</h5>
+            </div>
+            <div class="admin-table table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Mã ĐH</th>
+                            <th>Khách hàng</th>
+                            <th>SĐT</th>
+                            <th>Địa chỉ</th>
+                            <th>Tổng tiền</th>
+                            <th>Trạng thái</th>
+                            <th>Ngày đặt</th>
+                            <th>Chi tiết</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="order : ${orders}">
+                            <td><span class="badge bg-primary" th:text="'#' + ${order.id}">ID</span></td>
+                            <td><strong th:text="${order.customerName}">Tên</strong></td>
+                            <td th:text="${order.phone != null ? order.phone : 'N/A'}">SĐT</td>
+                            <td>
+                                <span th:text="${order.address != null ? order.address : 'N/A'}"
+                                    style="max-width: 150px; display: inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    Địa chỉ</span>
+                            </td>
+                            <td class="price-admin"
+                                th:text="${order.totalPrice != null ? #numbers.formatDecimal(order.totalPrice, 0, 'COMMA', 0, 'POINT') + ' ₫' : '0 ₫'}">
+                                0</td>
+                            <td>
+                                <span th:if="${order.status == 'PENDING'}" class="badge bg-warning text-dark">Chờ thanh toán</span>
+                                <span th:if="${order.status == 'PAID'}" class="badge bg-success">Đã thanh toán</span>
+                                <span th:if="${order.status == 'SHIPPING'}" class="badge bg-info">Đang giao</span>
+                                <span th:if="${order.status == 'COMPLETED'}" class="badge bg-primary">Hoàn thành</span>
+                                <span th:if="${order.status == 'CANCELLED'}" class="badge bg-danger">Đã hủy</span>
+                                <span th:if="${order.status == null}" class="badge bg-secondary">N/A</span>
+                            </td>
+                            <td
+                                th:text="${order.orderDate != null ? #temporals.format(order.orderDate, 'dd/MM/yyyy HH:mm') : 'N/A'}">
+                                Ngày</td>
+                            <td>
+                                <a th:href="@{'/admin/orders/' + ${order.id}}" class="btn btn-sm btn-outline-primary">Xem</a>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(orders)}">
+                            <td colspan="8" class="text-center text-muted py-4">Chưa có đơn hàng nào</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleSidebar() {
+            document.getElementById('adminSidebar').classList.toggle('show');
+        }
+        document.getElementById('link-orders').classList.add('active');
+    </script>
+</body>
+
+</html>

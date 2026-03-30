@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head th:replace="~{fragments/header :: head}"></head>
+
+<body>
+    <nav th:replace="~{fragments/header :: navbar}"></nav>
+    <main class="container mt-4">
+        <div class="page-header">
+            <h2><i class="bi bi-tags-fill"></i> Quản lý danh mục</h2><a th:href="@{/categories/add}"
+                class="btn btn-primary-custom"><i class="bi bi-plus-lg"></i> Thêm danh mục</a>
+        </div>
+        <div class="table-custom">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th style="width:80px">ID</th>
+                        <th>Tên danh mục</th>
+                        <th style="width:200px">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="cat : ${categories}">
+                        <td th:text="${cat.id}"></td>
+                        <td><strong th:text="${cat.name}"></strong></td>
+                        <td><a th:href="@{'/categories/edit/' + ${cat.id}}"
+                                class="btn btn-sm btn-warning btn-sm-action"><i class="bi bi-pencil"></i> Sửa</a> <a
+                                th:href="@{'/categories/delete/' + ${cat.id}}"
+                                class="btn btn-sm btn-danger btn-sm-action"
+                                onclick="return confirm('Bạn có chắc muốn xóa danh mục này?')"><i
+                                    class="bi bi-trash"></i> Xóa</a></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(categories)}">
+                        <td colspan="3" class="text-center py-5 text-muted"><i class="bi bi-inbox"
+                                style="font-size:2rem"></i><br><span class="mt-2 d-block">Chưa có danh mục nào.</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+    <footer th:replace="~{fragments/header :: footer}"></footer>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

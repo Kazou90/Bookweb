@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head th:replace="~{fragments/header :: head}"></head>
+
+<body>
+    <nav th:replace="~{fragments/header :: navbar}"></nav>
+
+    <main class="container mt-4 mb-5">
+        <div class="page-header">
+            <div>
+                <h2><i class="bi bi-qr-code-scan"></i> Thanh toán chuyển khoản</h2>
+                <p class="text-muted">Quét mã QR bên dưới để thanh toán đơn hàng</p>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Cột trái: QR Code -->
+            <div class="col-lg-5">
+                <div class="payment-qr-card">
+                    <div class="payment-qr-header">
+                        <h5><i class="bi bi-bank"></i> Chuyển khoản ngân hàng</h5>
+                    </div>
+                    <div class="payment-qr-body text-center">
+                        <img th:src="${qrCodeUrl}" alt="QR Code Thanh toán" class="payment-qr-img" id="qrCodeImg">
+
+                        <div class="payment-info mt-3">
+                            <p><strong>Ngân hàng:</strong> <span th:text="${bankCode}">MBBank</span></p>
+                            <p><strong>Chủ TK:</strong> <span th:text="${accountName}">Tên</span></p>
+                            <p><strong>Số TK:</strong>
+                                <span th:text="${accountNumber}" class="fw-bold text-primary" id="accNumber">STK</span>
+                                <button class="btn btn-sm btn-outline-secondary ms-1" onclick="copyAccount()">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </p>
+                            <p><strong>Số tiền:</strong>
+                                <span class="fs-5 fw-bold text-danger"
+                                    th:text="${#numbers.formatDecimal(finalTotal, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0
+                                    ₫</span>
+                            </p>
+                            <!-- Hiển thị giảm giá nếu có -->
+                            <div th:if="${discount > 0}" class="alert alert-success py-2 mb-2">
+                                <small>
+                                    <i class="bi bi-tag-fill"></i>
+                                    Mã <strong th:text="${couponCode}">CODE</strong> -
+                                    Giảm <strong
+                                        th:text="${#numbers.formatDecimal(discount, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0
+                                        ₫</strong>
+                                </small>
+                            </div>
+                            <p><strong>Nội dung CK:</strong>
+                                <span class="badge bg-primary fs-6" th:text="${orderCode}" id="orderCodeText">Mã
+                                    ĐH</span>
+                                <button class="btn btn-sm btn-outline-secondary ms-1" onclick="copyOrderCode()">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </p>
+                        </div>
+
+                        <div class="payment-status mt-3" id="paymentStatus">
+                            <div class="spinner-border text-primary spinner-border-sm" role="status"></div>
+                            <span class="ms-2">Đang chờ thanh toán...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cột phải: Chi tiết đơn hàng -->
+            <div class="col-lg-7">
+                <div class="stat-card mb-3" style="border-top-color: var(--primary);">
+                    <h5><i class="bi bi-person-fill"></i> Thông tin đặt hàng</h5>
+                    <hr>
+                    <p><strong>Họ tên:</strong> <span th:text="${customerName}">Tên</span></p>
+                    <p><strong>SĐT:</strong> <span th:text="${phone}">SĐT</span></p>
+                    <p><strong>Email:</strong> <span th:text="${email}">Email</span></p>
+                    <p class="mb-0"><strong>Địa chỉ:</strong> <span th:text="${address}">Địa chỉ</span></p>
+                </div>
+
+                <div class="table-wrapper">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Sách</th>
+                                <th>SL</th>
+                                <th>Đơn giá</th>
+                                <th>Thành tiền</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="item : ${cart}">
+                                <td>
+                                    <strong th:text="${item.book.title}">Sách</strong>
+                                    <br><small class="text-muted" th:text="${item.book.author}">Tác giả</small>
+                                </td>
+                                <td th:text="${item.quantity}">1</td>
+                                <td th:text="${#numbers.formatDecimal(item.book.price, 0, 'COMMA', 0, 'POINT')} + ' ₫'">
+                                    0 ₫</td>
+                                <td>
+                                    <strong class="text-success"
+                                        th:text="${#numbers.formatDecimal(item.subtotal, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0
+                                        ₫</strong>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" class="text-end">Tạm tính:</td>
+                                <td th:text="${#numbers.formatDecimal(total, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</td>
+                            </tr>
+                            <tr th:if="${discount > 0}" class="text-success">
+                                <td colspan="3" class="text-end">
+                                    <i class="bi bi-tag-fill"></i> Giảm giá (<span th:text="${couponCode}">CODE</span>):
+                                </td>
+                                <td th:text="'-' + ${#numbers.formatDecimal(discount, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0
+                                    ₫</td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" class="text-end"><strong>TỔNG THANH TOÁN:</strong></td>
+                                <td>
+                                    <strong class="text-danger fs-5"
+                                        th:text="${#numbers.formatDecimal(finalTotal, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0
+                                        ₫</strong>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div class="alert alert-info">
+                    <h6><i class="bi bi-info-circle-fill"></i> Hướng dẫn thanh toán</h6>
+                    <ol class="mb-0 small">
+                        <li>Mở app ngân hàng trên điện thoại</li>
+                        <li>Quét mã QR ở bên trái hoặc chuyển khoản thủ công</li>
+                        <li><strong>Nhập đúng nội dung chuyển khoản:</strong>
+                            <span class="badge bg-primary" th:text="${orderCode}">Mã</span>
+                        </li>
+                        <li>Hệ thống sẽ tự động xác nhận sau khi nhận được tiền</li>
+                    </ol>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <a th:href="@{/cart}" class="btn btn-outline-custom">
+                        <i class="bi bi-arrow-left"></i> Quay lại giỏ hàng
+                    </a>
+                    <form th:action="@{/payment/confirm}" method="post" id="confirmForm" style="display:none;">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="bi bi-check-circle"></i> Đã thanh toán - Xác nhận đơn hàng
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer th:replace="~{fragments/header :: footer}"></footer>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script th:inline="javascript">
+        let checkInterval = setInterval(function () {
+            fetch('/payment/check-status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.paid) {
+                        clearInterval(checkInterval);
+                        document.getElementById('paymentStatus').innerHTML =
+                            '<div class="alert alert-success mb-0">' +
+                            '<i class="bi bi-check-circle-fill"></i> <strong>Thanh toán thành công!</strong> ' +
+                            'Đang tạo đơn hàng...</div>';
+                        document.getElementById('confirmForm').style.display = 'block';
+                        setTimeout(function () {
+                            document.getElementById('confirmForm').submit();
+                        }, 2000);
+                    }
+                })
+                .catch(err => console.log('Lỗi kiểm tra:', err));
+        }, 5000);
+
+        function copyAccount() {
+            let acc = document.getElementById('accNumber').innerText;
+            navigator.clipboard.writeText(acc).then(() => {
+                alert('Đã sao chép số tài khoản: ' + acc);
+            });
+        }
+
+        function copyOrderCode() {
+            let code = document.getElementById('orderCodeText').innerText;
+            navigator.clipboard.writeText(code).then(() => {
+                alert('Đã sao chép mã đơn hàng: ' + code);
+            });
+        }
+    </script>
+
+    <style>
+        .payment-qr-card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            border: 2px solid var(--primary);
+            overflow: hidden;
+        }
+
+        .payment-qr-header {
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+            color: #fff;
+            padding: 1rem 1.5rem;
+        }
+
+        .payment-qr-header h5 {
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .payment-qr-body {
+            padding: 1.5rem;
+        }
+
+        .payment-qr-img {
+            max-width: 280px;
+            width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .payment-info p {
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .payment-status {
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+    </style>
+</body>
+
+</html>

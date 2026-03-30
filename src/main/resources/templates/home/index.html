@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head th:replace="~{fragments/header :: head}"></head>
+
+<body>
+    <nav th:replace="~{fragments/header :: navbar}"></nav>
+
+    <main>
+        <!-- ===== HERO SECTION ===== -->
+        <div class="hero-section">
+            <h1><i class="bi bi-book"></i> BookStore</h1>
+            <p class="hero-slogan">Nơi tri thức gặp gỡ đam mê đọc sách</p>
+            <p>Khám phá hàng nghìn đầu sách chất lượng với nhiều thể loại phong phú.<br>
+                Mua sách trực tuyến nhanh chóng, tiện lợi, giao hàng tận nơi.</p>
+            <div class="hero-buttons mt-4">
+                <a th:href="@{/books}" class="btn btn-accent btn-lg me-2">
+                    <i class="bi bi-search"></i> Khám phá kho sách
+                </a>
+                <a th:href="@{/register}" class="btn btn-outline-light btn-lg" sec:authorize="!isAuthenticated()">
+                    <i class="bi bi-person-plus"></i> Đăng ký miễn phí
+                </a>
+            </div>
+        </div>
+
+        <div class="container">
+            <!-- ===== THÔNG BÁO ĐẶT HÀNG THÀNH CÔNG ===== -->
+            <div class="alert alert-custom-success mt-3" th:if="${param.success}">
+                <i class="bi bi-check-circle-fill"></i> Đặt hàng thành công! Cảm ơn bạn đã mua sắm tại BookStore.
+            </div>
+
+            <!-- ===== THANH SỐ LIỆU ===== -->
+            <div class="row g-3 mt-3 mb-4">
+                <div class="col-md-3 col-6">
+                    <div class="stat-card text-center" style="border-top-color: var(--primary);">
+                        <h3 class="fw-bold text-primary" th:text="${totalBooks}">0</h3>
+                        <p class="mb-0 text-muted small">Đầu sách</p>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="stat-card text-center" style="border-top-color: var(--accent);">
+                        <h3 class="fw-bold" style="color: var(--accent);" th:text="${#lists.size(categories)}">0</h3>
+                        <p class="mb-0 text-muted small">Thể loại</p>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="stat-card text-center" style="border-top-color: var(--success);">
+                        <h3 class="fw-bold text-success">24/7</h3>
+                        <p class="mb-0 text-muted small">Hỗ trợ</p>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="stat-card text-center" style="border-top-color: var(--info);">
+                        <h3 class="fw-bold" style="color: var(--info);">Free</h3>
+                        <p class="mb-0 text-muted small">Giao hàng</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== DANH MỤC NỔI BẬT ===== -->
+            <div class="section-header mt-5">
+                <h2><i class="bi bi-grid-fill"></i> Danh mục sách</h2>
+                <p class="text-muted">Khám phá sách theo thể loại yêu thích của bạn</p>
+            </div>
+            <div class="row g-3 mb-5">
+                <div class="col-lg-3 col-md-4 col-6" th:each="cat : ${categories}">
+                    <a th:href="@{/books}" class="text-decoration-none">
+                        <div class="category-card">
+                            <div class="category-icon">
+                                <i class="bi bi-bookmark-star"></i>
+                            </div>
+                            <h6 th:text="${cat.name}">Danh mục</h6>
+                            <small class="text-muted"
+                                th:text="${(cat.books != null ? #lists.size(cat.books) : 0) + ' cuốn sách'}">0
+                                cuốn</small>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- ===== SÁCH NỔI BẬT ===== -->
+            <div class="section-header" th:if="${!#lists.isEmpty(featuredBooks)}">
+                <h2><i class="bi bi-star-fill" style="color: var(--accent);"></i> Sách nổi bật</h2>
+                <p class="text-muted">Những cuốn sách được yêu thích nhất tại BookStore</p>
+            </div>
+            <div class="row g-3 mb-5" th:if="${!#lists.isEmpty(featuredBooks)}">
+                <div class="col-xl-3 col-lg-4 col-md-6" th:each="book : ${featuredBooks}">
+                    <div class="book-card">
+                        <div class="book-card-img">
+                            <img th:if="${book.image != null}" th:src="@{'/images/' + ${book.image}}" alt="Sách">
+                            <div th:unless="${book.image != null}" class="book-card-placeholder">
+                                <i class="bi bi-journal-bookmark" style="font-size: 2rem;"></i>
+                            </div>
+                            <span class="book-badge" th:if="${book.category != null}"
+                                th:text="${book.category.name}">Danh mục</span>
+                        </div>
+                        <div class="book-card-body">
+                            <h6 class="book-card-title" th:text="${book.title}">Tên sách</h6>
+                            <p class="book-card-author"
+                                th:text="${book.author != null ? book.author : 'Chưa rõ tác giả'}">Tác giả</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="book-card-price"
+                                    th:text="${book.price != null ? #numbers.formatDecimal(book.price, 0, 'COMMA', 0, 'POINT') + ' ₫' : 'Liên hệ'}">0
+                                    ₫</span>
+                                <form th:action="@{'/cart/add/' + ${book.id}}" method="post">
+                                    <button type="submit" class="btn btn-sm btn-accent">
+                                        <i class="bi bi-cart-plus"></i> Mua
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== SÁCH BÁN CHẠY ===== -->
+            <div class="section-header" th:if="${!#lists.isEmpty(bestSellers)}">
+                <h2><i class="bi bi-fire" style="color: #ef4444;"></i> Sách bán chạy</h2>
+                <p class="text-muted">Top sách được mua nhiều nhất</p>
+            </div>
+            <div class="row g-3 mb-5" th:if="${!#lists.isEmpty(bestSellers)}">
+                <div class="col-xl-3 col-lg-4 col-md-6" th:each="book, stat : ${bestSellers}">
+                    <div class="book-card book-card-hot">
+                        <div class="bestseller-rank" th:text="'#' + ${stat.index + 1}">1</div>
+                        <div class="book-card-img">
+                            <img th:if="${book.image != null}" th:src="@{'/images/' + ${book.image}}" alt="Sách">
+                            <div th:unless="${book.image != null}" class="book-card-placeholder">
+                                <i class="bi bi-journal-bookmark" style="font-size: 2rem;"></i>
+                            </div>
+                        </div>
+                        <div class="book-card-body">
+                            <h6 class="book-card-title" th:text="${book.title}">Tên sách</h6>
+                            <p class="book-card-author" th:text="${book.author != null ? book.author : 'Chưa rõ'}">Tác
+                                giả</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="book-card-price"
+                                    th:text="${book.price != null ? #numbers.formatDecimal(book.price, 0, 'COMMA', 0, 'POINT') + ' ₫' : 'Liên hệ'}">0
+                                    ₫</span>
+                                <form th:action="@{'/cart/add/' + ${book.id}}" method="post">
+                                    <button type="submit" class="btn btn-sm btn-accent">
+                                        <i class="bi bi-cart-plus"></i> Mua
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== SÁCH MỚI NHẤT ===== -->
+            <div class="section-header" th:if="${!#lists.isEmpty(newestBooks)}">
+                <h2><i class="bi bi-clock-history" style="color: var(--info);"></i> Sách mới nhất</h2>
+                <p class="text-muted">Vừa cập nhật trong kho sách</p>
+            </div>
+            <div class="row g-3 mb-5" th:if="${!#lists.isEmpty(newestBooks)}">
+                <div class="col-xl-3 col-lg-4 col-md-6" th:each="book : ${newestBooks}">
+                    <div class="book-card">
+                        <span class="new-badge">Mới</span>
+                        <div class="book-card-img">
+                            <img th:if="${book.image != null}" th:src="@{'/images/' + ${book.image}}" alt="Sách">
+                            <div th:unless="${book.image != null}" class="book-card-placeholder">
+                                <i class="bi bi-journal-bookmark" style="font-size: 2rem;"></i>
+                            </div>
+                        </div>
+                        <div class="book-card-body">
+                            <h6 class="book-card-title" th:text="${book.title}">Tên sách</h6>
+                            <p class="book-card-author" th:text="${book.author != null ? book.author : 'Chưa rõ'}">Tác
+                                giả</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="book-card-price"
+                                    th:text="${book.price != null ? #numbers.formatDecimal(book.price, 0, 'COMMA', 0, 'POINT') + ' ₫' : 'Liên hệ'}">0
+                                    ₫</span>
+                                <form th:action="@{'/cart/add/' + ${book.id}}" method="post">
+                                    <button type="submit" class="btn btn-sm btn-accent">
+                                        <i class="bi bi-cart-plus"></i> Mua
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== SÁCH GIÁ TỐT ===== -->
+            <div class="section-header" th:if="${!#lists.isEmpty(cheapBooks)}">
+                <h2><i class="bi bi-piggy-bank" style="color: var(--success);"></i> Giá tốt hôm nay</h2>
+                <p class="text-muted">Những cuốn sách với mức giá cực kỳ hấp dẫn</p>
+            </div>
+            <div class="row g-3 mb-5" th:if="${!#lists.isEmpty(cheapBooks)}">
+                <div class="col-xl-3 col-lg-4 col-md-6" th:each="book : ${cheapBooks}">
+                    <div class="book-card book-card-deal">
+                        <div class="book-card-img">
+                            <img th:if="${book.image != null}" th:src="@{'/images/' + ${book.image}}" alt="Sách">
+                            <div th:unless="${book.image != null}" class="book-card-placeholder">
+                                <i class="bi bi-journal-bookmark" style="font-size: 2rem;"></i>
+                            </div>
+                        </div>
+                        <div class="book-card-body">
+                            <h6 class="book-card-title" th:text="${book.title}">Tên sách</h6>
+                            <p class="book-card-author" th:text="${book.author != null ? book.author : 'Chưa rõ'}">Tác
+                                giả</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="book-card-price text-success"
+                                    th:text="${book.price != null ? #numbers.formatDecimal(book.price, 0, 'COMMA', 0, 'POINT') + ' ₫' : 'Liên hệ'}">0
+                                    ₫</span>
+                                <form th:action="@{'/cart/add/' + ${book.id}}" method="post">
+                                    <button type="submit" class="btn btn-sm btn-success">
+                                        <i class="bi bi-cart-plus"></i> Mua
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== CTA SECTION ===== -->
+            <div class="cta-section mb-5">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h3>Bạn đã sẵn sàng khám phá?</h3>
+                        <p class="mb-0">Hàng nghìn đầu sách đang chờ bạn. Đăng ký ngay để nhận ưu đãi đặc biệt!</p>
+                    </div>
+                    <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                        <a th:href="@{/books}" class="btn btn-accent btn-lg">
+                            <i class="bi bi-arrow-right"></i> Xem tất cả sách
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer th:replace="~{fragments/header :: footer}"></footer>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script th:replace="~{fragments/header :: notifScript}"></script>
+</body>
+
+</html>
